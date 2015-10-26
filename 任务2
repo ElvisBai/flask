@@ -1,0 +1,151 @@
+ Flask简易入门教程二、templates模版速速入门
+分类： Flask 简易入门教程 2015-01-06 09:36 1228人阅读 评论(0) 收藏 举报
+Flask教程（二）、templates模版速速入门
+童鞋们，如果你做了上面一章的内容。侬现在的文件结构应该是下面着个样子的you see：
+     flaskstudy\
+      app\
+        static\
+        templates\
+        __init__.py
+        views.py
+      tmp\
+      run.py
+上节咱也测试过了，都是work的。
+这节的内容是模版，为啥要模版呢？
+答案是必须的！业务分离，这样前端搞前端，后台搞后台，全部把页面写在代码里面像什么回事儿啊。
+来瞧瞧下面的一个例子：
+from app import app
+
+@app.route('/')
+@app.route('/index')
+def index():
+    user = {'nickname': '马晕'}  # fake user
+    return '''
+<html>
+  <head>
+    <title>Home Page</title>
+  </head>
+  <body>
+    <h1>Hello, ''' + user['nickname'] + '''</h1>
+  </body>
+</html>
+'''
+啷哩个浪，一大堆，这个还算是少的了，要是几千行的UI规模，程序员估计要直接喷血。没有模版是不可想象的，估计也没啥人用python开发网站了。
+关键时刻，templates来救火。重写上面的为如下形式：
+新建模版文件：app/templates/index.html
+内容如下：
+<html>
+  <head>
+    <title>{{ title }} - wetucao</title>
+  </head>
+  <body>
+      <h1>Hello, {{ user.nickname }}!</h1>
+  </body>
+</html>
+和上面有些区别的是，用了两对括号{{}}来存放数据内容，本质应该是一种替换。
+当然，views也要做相应的修改的，变化如下：
+
+from flask import render_template
+from app import app
+
+@app.route('/')
+@app.route('/index')
+def index():
+    user = {'nickname': '大爷'}  # fake user
+    return render_template('index.html',
+                           title='Home',
+                           user=user)
+同时为了渲染模版，咱们也得引入一个Flask的新模块，render_template.用来替换参数。
+render_template会召唤神龙 Jinja2 模版渲染引擎来替换｛｛｝｝
+Jinja2官网： http://jinja.pocoo.org/
+Jinja2是Python下一个被广泛应用的模版引擎，他的设计思想来源于Django的模板引擎，并扩展了其语法和一系列强大的功能。其中最显著的一个是增加了沙箱执行功能和可选的自动转义功能，这对大多应用的安全性来说是非常重要的。
+他基于unicode并能在python2.4之后的版本运行，包括python3。
+与此同时jinja2同学还能够支持判断语句，客官且看：
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;     charset=gb2312">
+{% if title %}
+  <title>{{ title }} - wetucao</title>
+    {% else %}
+    <title>Welcome to wetucao</title>
+    {% endif %}
+  </head>
+  <body>
+      <h1>Hello, {{ user.nickname }}!</h1>
+  </body>
+</html>
+
+   
+现在楼上的小伙子，变得有点聪明了，能够判断不同情况进行显示了。但是多人情况呢？
+模版中的循环：
+可能会有很多个小盆友需要被显示出来。咋办呢？如下如下：
+其中author是作者，body字段是提交的吐槽
+def index():
+    user = {'nickname': '大表哥'}  # fake user
+    posts = [  # fake array of posts
+        { 
+            'author': {'nickname': '大姨夫'}, 
+            'body': 'Beautiful day in Portland!' 
+        },
+        { 
+            'author': {'nickname': '大保健'}, 
+            'body': 'The Avengers movie was so cool!' 
+        }
+    ]
+    return render_template("index.html",
+                           title='Home',
+                           user=user,
+                           posts=posts)
+当然， 模版文件也要有相应的修改，主要是添加了 for post in posts：
+<html>
+  <head>
+    {% if title %}
+    <title>{{ title }} - microblog</title>
+    {% else %}
+    <title>Welcome to microblog</title>
+    {% endif %}
+  </head>
+  <body>
+    <h1>Hi, {{ user.nickname }}!</h1>
+    {% for post in posts %}
+    <div><p>{{ post.author.nickname }} says: <b>{{ post.body }}</b></p></div>
+    {% endfor %}
+  </body>
+</html>
+简单吧？so easy!妈妈再也不用担心你不吃药
+其实上面就是已经把控制的三种流程，顺序，分支，循环，都包含了，不是平白无故的写的。
+
+模版的继承
+一般的网站都需要有一些公共的模块，例如导航，foot模块等等。
+这个时候，如果每个模版都重复的粘贴复制，会很低效，也不利于维护（一改，则都要重复的改）
+故继承是非常有用的，模版也是可以继承的。
+道理大家都懂，我就不在这里扯淡了，直接说flask里面是咋搞的吧。
+首先我们新建一个base文件夹：
+<html>
+  <head>
+    {% if title %}
+    <title>{{ title }} - wetucao</title>
+    {% else %}
+    <title>Welcome to mwetucao/title>
+    {% endif %}
+  </head>
+  <body>
+    <div>我们吐槽: <a href="/index">主页</a></div>
+    <hr>
+    {% block content %}{% endblock %}
+  </body>
+</html>
+这个和之前有什么区别呢？
+主要是block控制模块，用来放我们的模块内容。
+然后index.html对应改为：
+{% extends "base.html" %}
+{% block content %}
+    <h1>Hi, {{ user.nickname }}!</h1>
+    {% for post in posts %}
+    <div><p>{{ post.author.nickname }} says: <b>{{ post.body }}</b></p></div>
+    {% endfor %}
+{% endblock %}
+那是相当相当的方便啊!
+大表哥,亲测如下：
+
+版权声明：本文为博主原创文章，未经博主允许不得转载。
